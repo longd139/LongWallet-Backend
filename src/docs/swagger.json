@@ -1,0 +1,361 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "LongWallet API Documentation",
+    "version": "1.0.0",
+    "description": "Tài liệu API cho hệ thống quản lý chi tiêu cá nhân thông minh **LongWallet** (Backend Node.js & Supabase Postgres 17).\n\n### 🔐 Xác thực (Authentication):\nĐa số các endpoint yêu cầu gửi kèm Supabase JWT qua header:\n`Authorization: Bearer <supabase_access_token>`"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Nhập token đăng nhập từ Supabase Auth (access_token)"
+      }
+    },
+    "schemas": {
+      "Wallet": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "Vietcombank Chính" },
+          "bank_code": { "type": "string", "example": "VCB" },
+          "account_number": { "type": "string", "example": "0123456789" },
+          "package_name": { "type": "string", "example": "com.VCB" },
+          "current_balance": { "type": "number", "example": 15000000 },
+          "icon": { "type": "string", "example": "wallet" },
+          "color": { "type": "string", "example": "#10B981" },
+          "is_archived": { "type": "boolean", "example": false },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "wallet_id": { "type": "string", "format": "uuid" },
+          "category_id": { "type": "string", "format": "uuid", "nullable": true },
+          "amount": { "type": "number", "example": 55000 },
+          "type": { "type": "string", "enum": ["INCOME", "EXPENSE", "TRANSFER"], "example": "EXPENSE" },
+          "transaction_date": { "type": "string", "format": "date-time" },
+          "note": { "type": "string", "example": "Highland Coffee" },
+          "receipt_url": { "type": "string", "nullable": true },
+          "is_auto_detected": { "type": "boolean", "example": true },
+          "raw_message": { "type": "string", "example": "TK 0123 tai VCB -55,000VND vao 22/10/2026. ND: Highland Coffee" },
+          "raw_hash": { "type": "string", "example": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" },
+          "status": { "type": "string", "enum": ["CONFIRMED", "PENDING", "REJECTED"], "example": "CONFIRMED" }
+        }
+      },
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid", "nullable": true },
+          "name": { "type": "string", "example": "Ăn uống" },
+          "type": { "type": "string", "enum": ["INCOME", "EXPENSE"], "example": "EXPENSE" },
+          "icon": { "type": "string", "example": "utensils" },
+          "color": { "type": "string", "example": "#EF4444" },
+          "is_default": { "type": "boolean", "example": true },
+          "category_keywords": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string", "format": "uuid" },
+                "keyword": { "type": "string", "example": "highland" }
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": { "type": "string", "example": "Unauthorized. Invalid or expired authentication token." }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Kiểm tra tình trạng server & kết nối Database",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Server và Database hoạt động tốt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "healthy" },
+                    "uptime": { "type": "number", "example": 45.12 },
+                    "timestamp": { "type": "string", "example": "2026-10-22T09:54:34.919Z" },
+                    "database": { "type": "string", "example": "connected" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wallets": {
+      "get": {
+        "summary": "Lấy danh sách các ví của người dùng",
+        "tags": ["Wallets"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Danh sách ví thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Wallet" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Tạo ví mới hoặc liên kết tài khoản ngân hàng",
+        "tags": ["Wallets"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "example": "Vietcombank Lương" },
+                  "bank_code": { "type": "string", "example": "VCB" },
+                  "account_number": { "type": "string", "example": "0123456789" },
+                  "package_name": { "type": "string", "example": "com.VCB" },
+                  "current_balance": { "type": "number", "example": 5000000 },
+                  "icon": { "type": "string", "example": "wallet" },
+                  "color": { "type": "string", "example": "#10B981" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Tạo ví thành công" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/transactions": {
+      "get": {
+        "summary": "Lấy lịch sử giao dịch",
+        "tags": ["Transactions"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["CONFIRMED", "PENDING", "REJECTED"] },
+            "description": "Lọc theo trạng thái (VD: PENDING để lấy các giao dịch ngân hàng chờ duyệt)"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 50 },
+            "description": "Số lượng bản ghi tối đa"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách giao dịch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Transaction" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Tạo giao dịch thu / chi (Thủ công hoặc Auto-detected)",
+        "tags": ["Transactions"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["wallet_id", "amount", "type"],
+                "properties": {
+                  "wallet_id": { "type": "string", "format": "uuid" },
+                  "category_id": { "type": "string", "format": "uuid" },
+                  "amount": { "type": "number", "example": 45000 },
+                  "type": { "type": "string", "enum": ["INCOME", "EXPENSE", "TRANSFER"], "example": "EXPENSE" },
+                  "transaction_date": { "type": "string", "format": "date-time" },
+                  "note": { "type": "string", "example": "Cơm trưa văn phòng" },
+                  "is_auto_detected": { "type": "boolean", "example": false },
+                  "raw_message": { "type": "string" },
+                  "raw_hash": { "type": "string" },
+                  "status": { "type": "string", "enum": ["CONFIRMED", "PENDING", "REJECTED"], "default": "CONFIRMED" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Tạo giao dịch thành công" },
+          "409": { "description": "Giao dịch trùng lặp (raw_hash đã tồn tại)" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/transactions/{id}/status": {
+      "patch": {
+        "summary": "Duyệt hoặc từ chối giao dịch ngân hàng tự động (PENDING -> CONFIRMED / REJECTED)",
+        "tags": ["Transactions"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": { "type": "string", "enum": ["CONFIRMED", "REJECTED"], "example": "CONFIRMED" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cập nhật trạng thái thành công" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/categories": {
+      "get": {
+        "summary": "Lấy danh mục thu/chi kèm từ khóa nhận diện tự động",
+        "tags": ["Categories"],
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Danh sách danh mục thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/analytics/summary": {
+      "get": {
+        "summary": "Thống kê tổng quan thu nhập, chi tiêu và số dư ròng",
+        "tags": ["Analytics"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Ngày bắt đầu lọc (ISO 8601)"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "Ngày kết thúc lọc (ISO 8601)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Thống kê tổng quan thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalIncome": { "type": "number", "example": 25000000 },
+                        "totalExpense": { "type": "number", "example": 8500000 },
+                        "netSavings": { "type": "number", "example": 16500000 },
+                        "transactionCount": { "type": "integer", "example": 42 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  },
+  "responses": {
+    "Unauthorized": {
+      "description": "Không có quyền truy cập hoặc token không hợp lệ",
+      "content": {
+        "application/json": {
+          "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+        }
+      }
+    },
+    "BadRequest": {
+      "description": "Yêu cầu không hợp lệ hoặc thiếu dữ liệu bắt buộc",
+      "content": {
+        "application/json": {
+          "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+        }
+      }
+    }
+  }
+}

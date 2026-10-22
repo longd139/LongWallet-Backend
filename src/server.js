@@ -13,11 +13,20 @@ const analyticsRouter = require('./routes/analytics');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./docs/swagger.json');
+
 // Middlewares
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Allow Swagger UI inline scripts & styles
+}));
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
+
+// Swagger Documentation
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Route Mounts
 app.use('/health', healthRouter);
@@ -42,6 +51,7 @@ app.listen(PORT, () => {
   console.log(`========================================`);
   console.log(`🚀 LongWallet Backend Service Started`);
   console.log(`📍 URL: http://localhost:${PORT}`);
+  console.log(`📚 Swagger: http://localhost:${PORT}/docs`);
   console.log(`🩺 Health: http://localhost:${PORT}/health`);
   console.log(`========================================`);
 });

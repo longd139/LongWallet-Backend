@@ -5,6 +5,7 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const healthRouter = require('./routes/health');
+const authRouter = require('./routes/auth');
 const walletsRouter = require('./routes/wallets');
 const transactionsRouter = require('./routes/transactions');
 const categoriesRouter = require('./routes/categories');
@@ -30,6 +31,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Route Mounts
 app.use('/health', healthRouter);
+app.use('/api/auth', authRouter);
 app.use('/api/wallets', walletsRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/categories', categoriesRouter);

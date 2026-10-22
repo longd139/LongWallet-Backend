@@ -36,7 +36,118 @@
       ]
     },
     {
-      "name": "01. Wallets",
+      "name": "01. Authentication",
+      "item": [
+        {
+          "name": "Register (Đăng ký)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"123456\",\n  \"full_name\": \"Nguyễn Văn A\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            },
+            "description": "Đăng ký tài khoản người dùng mới (Tự động tạo profile và ví tiền mặt mặc định)"
+          }
+        },
+        {
+          "name": "Login (Đăng nhập & Tự động lưu Token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.tokens) {",
+                  "        pm.environment.set('token', json.data.tokens.accessToken);",
+                  "        if (json.data.tokens.refreshToken) {",
+                  "            pm.environment.set('refreshToken', json.data.tokens.refreshToken);",
+                  "        }",
+                  "        console.log('✅ Token saved to environment automatically!');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Đăng nhập và tự động lưu accessToken vào biến môi trường {{token}}"
+          }
+        },
+        {
+          "name": "Get Current Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Lấy thông tin tài khoản người dùng hiện tại (Yêu cầu đăng nhập)"
+          }
+        },
+        {
+          "name": "Refresh Access Token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Làm mới access token khi hết hạn bằng refresh token"
+          }
+        },
+        {
+          "name": "Logout (Đăng xuất)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Đăng xuất tài khoản"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Wallets",
       "item": [
         {
           "name": "Get All Wallets",
@@ -92,7 +203,7 @@
       ]
     },
     {
-      "name": "02. Transactions",
+      "name": "03. Transactions",
       "item": [
         {
           "name": "Get All Transactions",
@@ -205,7 +316,7 @@
       ]
     },
     {
-      "name": "03. Categories",
+      "name": "04. Categories",
       "item": [
         {
           "name": "Get Categories & Keywords",
@@ -223,7 +334,7 @@
       ]
     },
     {
-      "name": "04. Analytics",
+      "name": "05. Analytics",
       "item": [
         {
           "name": "Get Summary (All time)",

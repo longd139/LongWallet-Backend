@@ -1,0 +1,30 @@
+{
+  "name": "longwallet-backend",
+  "version": "1.0.0",
+  "description": "Backend API service for LongWallet Personal Expense Tracker",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [
+    "longwallet",
+    "expense-tracker",
+    "supabase",
+    "express",
+    "nodejs"
+  ],
+  "author": "longd139",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}

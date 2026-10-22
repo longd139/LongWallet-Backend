@@ -1,0 +1,268 @@
+{
+  "info": {
+    "_postman_id": "c1f7b8a2-9e84-48d1-b58f-7c19a4d83001",
+    "name": "LongWallet API",
+    "description": "Postman Collection hoàn chỉnh cho hệ thống LongWallet Personal Expense Tracker",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00. System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Kiểm tra trạng thái uptime của Server và kết nối Database Supabase"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01. Wallets",
+      "item": [
+        {
+          "name": "Get All Wallets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets"]
+            },
+            "description": "Lấy danh sách các ví đang hoạt động của người dùng"
+          }
+        },
+        {
+          "name": "Create Wallet (Tiền mặt)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ví tiền mặt phụ\",\n  \"bank_code\": \"CASH\",\n  \"current_balance\": 500000,\n  \"icon\": \"wallet\",\n  \"color\": \"#10B981\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets"]
+            },
+            "description": "Tạo ví tiền mặt thông thường"
+          }
+        },
+        {
+          "name": "Create Wallet (Ngân hàng VCB - Có bắt thông báo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vietcombank Digibank\",\n  \"bank_code\": \"VCB\",\n  \"account_number\": \"0123456789\",\n  \"package_name\": \"com.VCB\",\n  \"current_balance\": 12500000,\n  \"icon\": \"bank\",\n  \"color\": \"#059669\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets"]
+            },
+            "description": "Tạo ví liên kết ngân hàng và package app Android để tự động bắt thông báo"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Transactions",
+      "item": [
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"],
+              "query": [
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Lấy 20 giao dịch gần nhất"
+          }
+        },
+        {
+          "name": "Get Pending Transactions (Ngân hàng chờ duyệt)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions?status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"],
+              "query": [
+                { "key": "status", "value": "PENDING" }
+              ]
+            },
+            "description": "Lấy danh sách các biến động số dư tự động bắt được đang chờ người dùng xác nhận"
+          }
+        },
+        {
+          "name": "Create Manual Expense (Chi tiêu thủ công)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_id\": \"{{walletId}}\",\n  \"amount\": 45000,\n  \"type\": \"EXPENSE\",\n  \"note\": \"Ăn trưa cơm tấm\",\n  \"status\": \"CONFIRMED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Tạo một giao dịch chi tiêu thủ công"
+          }
+        },
+        {
+          "name": "Create Auto-detected Transaction (Bắt từ Notification)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_id\": \"{{walletId}}\",\n  \"amount\": 55000,\n  \"type\": \"EXPENSE\",\n  \"note\": \"Highland Coffee\",\n  \"is_auto_detected\": true,\n  \"raw_message\": \"TK 0123 tai VCB -55,000VND vao 22/10/2026. ND: HIGHLAND COFFEE\",\n  \"raw_hash\": \"test_hash_unique_123456\",\n  \"status\": \"PENDING\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions"]
+            },
+            "description": "Tạo giao dịch tự động bắt được từ notification ngân hàng (ở trạng thái PENDING)"
+          }
+        },
+        {
+          "name": "Approve Pending Transaction",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/{{transactionId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "{{transactionId}}", "status"]
+            },
+            "description": "Xác nhận giao dịch ngân hàng tự động"
+          }
+        },
+        {
+          "name": "Reject Pending Transaction",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"REJECTED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/transactions/{{transactionId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "transactions", "{{transactionId}}", "status"]
+            },
+            "description": "Từ chối / Bỏ qua giao dịch ngân hàng tự động"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Categories",
+      "item": [
+        {
+          "name": "Get Categories & Keywords",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "categories"]
+            },
+            "description": "Lấy danh sách danh mục thu/chi kèm từ khóa nhận diện tự động"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Analytics",
+      "item": [
+        {
+          "name": "Get Summary (All time)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "summary"]
+            },
+            "description": "Thống kê tổng thu, tổng chi và số dư tiết kiệm"
+          }
+        },
+        {
+          "name": "Get Summary (Date Range)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/analytics/summary?start_date=2026-10-01&end_date=2026-10-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "analytics", "summary"],
+              "query": [
+                { "key": "start_date", "value": "2026-10-01" },
+                { "key": "end_date", "value": "2026-10-31" }
+              ]
+            },
+            "description": "Thống kê tài chính theo khoảng thời gian"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ]
+}

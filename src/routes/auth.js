@@ -22,18 +22,40 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
+    let user, session;
+
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      // Dùng Admin API (bỏ qua hoàn toàn rate limit email)
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
           full_name: full_name || email.split('@')[0],
         },
-      },
-    });
+      });
 
-    if (error) {
-      return res.status(400).json({ success: false, error: error.message });
+      if (error) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      user = data.user;
+    } else {
+      // Fallback signUp client
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: full_name || email.split('@')[0],
+          },
+        },
+      });
+
+      if (error) {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      user = data.user;
+      session = data.session;
     }
 
     res.status(201).json({
@@ -41,14 +63,14 @@ router.post('/register', async (req, res) => {
       message: 'Đăng ký tài khoản thành công',
       data: {
         user: {
-          id: data.user?.id,
-          email: data.user?.email,
-          fullName: data.user?.user_metadata?.full_name,
+          id: user?.id,
+          email: user?.email,
+          fullName: user?.user_metadata?.full_name,
         },
-        session: data.session ? {
-          accessToken: data.session.access_token,
-          refreshToken: data.session.refresh_token,
-          expiresIn: data.session.expires_in,
+        session: session ? {
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+          expiresIn: session.expires_in,
         } : null,
       },
     });

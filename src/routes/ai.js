@@ -2,42 +2,55 @@ const express = require('express');
 const router = express.Router();
 require('dotenv').config();
 
-const GEMINI_MODEL = 'gemini-3.5-flash';
+const GEMINI_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-2.5-flash-lite'];
 
 async function callGemini(apiKey, prompt) {
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+  let lastError = null;
 
-  const geminiResponse = await fetch(geminiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [{ text: prompt }],
+  for (const model of GEMINI_MODELS) {
+    try {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const geminiResponse = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      ],
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.3,
-      },
-    }),
-  });
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            temperature: 0.3,
+          },
+        }),
+      });
 
-  if (!geminiResponse.ok) {
-    const errText = await geminiResponse.text();
-    console.error('Gemini API Error:', geminiResponse.status, errText);
-    throw new Error(`Gemini API trả về lỗi (${geminiResponse.status}): ${geminiResponse.statusText}`);
+      if (!geminiResponse.ok) {
+        const errText = await geminiResponse.text();
+        console.warn(`Gemini Model ${model} failed (${geminiResponse.status}):`, errText);
+        lastError = new Error(`Gemini API (${geminiResponse.status}): ${geminiResponse.statusText}`);
+        continue;
+      }
+
+      const data = await geminiResponse.json();
+      const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!candidateText) {
+        lastError = new Error('Không nhận được phản hồi hợp lệ từ Gemini AI.');
+        continue;
+      }
+
+      return JSON.parse(candidateText);
+    } catch (e) {
+      console.warn(`Error calling model ${model}:`, e.message);
+      lastError = e;
+    }
   }
 
-  const data = await geminiResponse.json();
-  const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!candidateText) {
-    throw new Error('Không nhận được phản hồi hợp lệ từ Gemini AI.');
-  }
-
-  return JSON.parse(candidateText);
+  throw lastError || new Error('Không thể kết nối đến Gemini AI.');
 }
 
 /**
@@ -150,6 +163,7 @@ router.post('/finalize-budget', async (req, res) => {
     const monthlyIncome = Number(answers.monthly_income) || 0;
     const fixedExpenses = Number(answers.fixed_expenses) || 0;
     const foodAllowance = Number(answers.food_allowance) || 0;
+    const fixedDetails = Array.isArray(answers.fixed_details) ? answers.fixed_details : [];
 
     const prompt = `
 Bạn là một chuyên gia cố vấn tài chính cá nhân cho ứng dụng LongWallet.
@@ -163,8 +177,9 @@ BỨC TRANH TÀI CHÍNH ĐẦY ĐỦ:
    - Tổng nợ còn lại: ${totalRemainingDebt.toLocaleString('vi-VN')} đ
    - Cần trả đúng hạn tháng này: ${totalMonthlyDebtDue.toLocaleString('vi-VN')} đ
 4. Chi phí cố định người dùng khai báo:
-   - Tiền nhà, điện nước, internet: ${fixedExpenses.toLocaleString('vi-VN')} đ
-   - Mức ăn uống mong muốn: ${foodAllowance.toLocaleString('vi-VN')} đ
+   - Tổng chi phí cố định: ${fixedExpenses.toLocaleString('vi-VN')} đ
+   ${fixedDetails.length > 0 ? `- Chi tiết các khoản: ${fixedDetails.map(d => `${d.name}: ${Number(d.amount).toLocaleString('vi-VN')} đ`).join(', ')}` : ''}
+   - Mức ăn uống mong muốn: ${foodAllowance.toLocaleString('vi-VN')} đ (~${Math.round(foodAllowance / 30).toLocaleString('vi-VN')} đ/ngày)
 5. Mục tiêu lớn:
    - Tên: ${goal ? goal.name : 'Chưa có'}
    - Cần tích lũy: ${goal ? Number(goal.targetAmount).toLocaleString('vi-VN') + ' đ' : '0 đ'}

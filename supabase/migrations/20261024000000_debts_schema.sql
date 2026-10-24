@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.debts (
     amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
     type TEXT NOT NULL CHECK (type IN ('DEBT', 'LOAN')), -- 'DEBT': Tôi nợ (Đi vay), 'LOAN': Cho vay
     due_date TIMESTAMPTZ,
+    monthly_amount NUMERIC(15, 2),
     is_settled BOOLEAN DEFAULT false NOT NULL,
     note TEXT,
     created_at TIMESTAMPTZ DEFAULT now() NOT NULL,

@@ -10,6 +10,7 @@ const walletsRouter = require('./routes/wallets');
 const transactionsRouter = require('./routes/transactions');
 const categoriesRouter = require('./routes/categories');
 const analyticsRouter = require('./routes/analytics');
+const aiRouter = require('./routes/ai');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,6 +37,7 @@ app.use('/api/wallets', walletsRouter);
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/ai', aiRouter);
 
 // 404 Handler
 app.use((req, res) => {
